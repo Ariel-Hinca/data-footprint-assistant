@@ -1,0 +1,45 @@
+﻿@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager Nav
+
+<div class="shell">
+    <aside class="sidebar">
+        <a class="brand" href="">Data Footprint</a>
+        <p class="brand-note">Stored only on this computer.</p>
+        <nav class="side-nav" aria-label="Main">
+            <NavLink class="side-link" href="" Match="NavLinkMatch.All">Overview</NavLink>
+            <NavLink class="side-link" href="profile">My details</NavLink>
+            <NavLink class="side-link" href="brokers">Brokers</NavLink>
+            <NavLink class="side-link" href="request">Write a request</NavLink>
+        </nav>
+    </aside>
+
+    <main class="canvas">
+        <div class="page-fade" @key="Nav.ToBaseRelativePath(Nav.Uri)">
+            @Body
+        </div>
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    The page hit a problem.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">×</span>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += HandleLocationChanged;
+    }
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= HandleLocationChanged;
+    }
+}

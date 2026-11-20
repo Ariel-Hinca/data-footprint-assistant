@@ -1,0 +1,50 @@
+[
+  {
+    "key": "spokeo",
+    "name": "Spokeo",
+    "optOutUrl": "https://www.spokeo.com/optout",
+    "hint": "Official opt-out page. Spokeo asks for the web address of the listing you want removed."
+  },
+  {
+    "key": "beenverified",
+    "name": "BeenVerified",
+    "optOutUrl": "https://www.beenverified.com/svc/optout/search/optouts",
+    "hint": "Official opt-out search. Look up your record, then confirm the email they send."
+  },
+  {
+    "key": "intelius",
+    "name": "Intelius",
+    "optOutUrl": "https://www.intelius.com/opt-out/",
+    "hint": "Official opt-out page. It opens the PeopleConnect form, which also covers related PeopleConnect sites."
+  },
+  {
+    "key": "whitepages",
+    "name": "Whitepages",
+    "optOutUrl": "https://www.whitepages.com/privacy/consumer-rights",
+    "hint": "Official privacy page. Their tool asks for the web address of your Whitepages listing."
+  },
+  {
+    "key": "peoplefinders",
+    "name": "PeopleFinders",
+    "optOutUrl": "https://www.peoplefinders.com/do-not-sell",
+    "hint": "Official Do Not Sell page. Use the opt-out form linked there. They do not take requests by email."
+  },
+  {
+    "key": "truepeoplesearch",
+    "name": "TruePeopleSearch",
+    "optOutUrl": "https://www.truepeoplesearch.com/removal",
+    "hint": "Official removal page. They email you a link to finish the request."
+  },
+  {
+    "key": "fastpeoplesearch",
+    "name": "FastPeopleSearch",
+    "optOutUrl": "https://www.fastpeoplesearch.com/removal",
+    "hint": "Official removal page. You search for your listing, then confirm an email."
+  },
+  {
+    "key": "lexisnexis-risk",
+    "name": "LexisNexis Risk Solutions",
+    "optOutUrl": "https://consumer.risk.lexisnexis.com/opt",
+    "hint": "Official LexisNexis Risk Solutions opt-out form. Read their instructions on the page before you submit."
+  }
+]

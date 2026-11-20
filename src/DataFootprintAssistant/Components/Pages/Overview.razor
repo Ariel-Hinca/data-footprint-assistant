@@ -1,0 +1,87 @@
+@page "/"
+@inject ProfileService Profiles
+@inject BrokerService Brokers
+@inject ActivityService Activities
+
+<PageTitle>Overview — Data Footprint</PageTitle>
+
+<section class="sheet">
+    <header class="page-head">
+        <h1>Overview</h1>
+        <p class="lede">@Summary</p>
+    </header>
+
+    @if (!profile.HasName && !profile.HasEmail && !profile.HasPhone)
+    {
+        <EmptyState Message="Add your name and contact details so letters and searches can use them."
+                    Href="profile"
+                    Action="Add my details" />
+    }
+
+    <div class="stats">
+        <div class="stat">
+            <span class="stat-number">@counts.NotStarted</span>
+            <span class="stat-label">Not started</span>
+        </div>
+        <div class="stat">
+            <span class="stat-number">@counts.InProgress</span>
+            <span class="stat-label">In progress</span>
+        </div>
+        <div class="stat">
+            <span class="stat-number">@counts.Confirmed</span>
+            <span class="stat-label">Confirmed removed</span>
+        </div>
+    </div>
+
+    @if (next is not null)
+    {
+        <p class="continue">
+            <a class="button" href="@($"brokers?open={Uri.EscapeDataString(next.BrokerKey)}")">Continue with @next.Name</a>
+        </p>
+    }
+    else if (brokers.Count > 0)
+    {
+        <p class="quiet">Every broker on your list is marked confirmed deleted.</p>
+    }
+
+    <h2>Recent activity</h2>
+    @if (activity.Count == 0)
+    {
+        <p class="quiet">Nothing here yet. Saving your details, updating a broker, or copying a letter will show up here.</p>
+    }
+    else
+    {
+        <ul class="activity">
+            @foreach (var entry in activity)
+            {
+                <li>
+                    <time datetime="@entry.CreatedAt.ToString("o")">@entry.CreatedAt.ToLocalTime().ToString("MMM d, yyyy · h:mm tt", CultureInfo.InvariantCulture)</time>
+                    <span>@entry.Message</span>
+                </li>
+            }
+        </ul>
+    }
+
+    <SearchLinks Profile="profile" />
+</section>
+
+@code {
+    private ProfileData profile = new();
+    private List<BrokerRecord> brokers = [];
+    private List<ActivityEntry> activity = [];
+    private (int NotStarted, int InProgress, int Confirmed) counts;
+    private BrokerRecord? next;
+
+    private string Summary => brokers.Count == 0
+        ? "No brokers yet."
+        : $"{brokers.Count} brokers on your list.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        profile = await Profiles.GetAsync();
+        brokers = await Brokers.ListAsync();
+        activity = await Activities.RecentAsync();
+        counts = BrokerService.Count(brokers);
+        next = BrokerService.NextToContinue(brokers);
+    }
+}

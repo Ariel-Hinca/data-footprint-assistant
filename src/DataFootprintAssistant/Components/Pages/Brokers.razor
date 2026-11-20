@@ -1,0 +1,168 @@
+@page "/brokers"
+@inject BrokerService Catalog
+@inject ProfileService Profiles
+
+<PageTitle>Brokers — Data Footprint</PageTitle>
+
+<section class="sheet">
+    <header class="page-head">
+        <h1>Brokers</h1>
+        <p class="lede">Pick a broker to see its official page, status, and notes.</p>
+    </header>
+
+    <div class="chips" role="group" aria-label="Filter by status">
+        @foreach (var chip in chips)
+        {
+            <button type="button"
+                    class="chip @(filter == chip.Key ? "is-on" : "")"
+                    @onclick="() => filter = chip.Key">
+                @chip.Label
+            </button>
+        }
+    </div>
+
+    @if (visible.Count == 0)
+    {
+        <EmptyState Message="No brokers with this status." />
+    }
+    else
+    {
+        <ul class="broker-list">
+            @foreach (var broker in visible)
+            {
+                <li>
+                    <button type="button"
+                            class="broker-row @(selected?.BrokerKey == broker.BrokerKey ? "is-open" : "")"
+                            @onclick="() => Open(broker)">
+                        <span>@broker.Name</span>
+                        <StatusPill Status="broker.Status" />
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+
+    @if (!showAdd)
+    {
+        <button type="button" class="text-button add-toggle" @onclick="() => showAdd = true">Add a broker</button>
+    }
+    else
+    {
+        <form class="add-card" @onsubmit="AddAsync" @onsubmit:preventDefault="true">
+            <h2>Add a broker</h2>
+            <label class="field">
+                <span>Name</span>
+                <input @bind="newName" />
+            </label>
+            <label class="field">
+                <span>Official opt-out page</span>
+                <input @bind="newUrl" placeholder="https://" />
+            </label>
+            @if (!string.IsNullOrWhiteSpace(addError))
+            {
+                <p class="form-error" role="alert">@addError</p>
+            }
+            <div class="button-row">
+                <button type="submit" class="button">Add</button>
+                <button type="button" class="button button-secondary" @onclick="CancelAdd">Cancel</button>
+            </div>
+        </form>
+    }
+</section>
+
+<BrokerPanel Broker="selected" Profile="profile" OnClose="ClosePanel" OnChanged="ReloadAsync" />
+
+@code {
+    private static readonly (string Key, string Label)[] chips =
+    [
+        ("all", "All"),
+        ("not-started", "Not started"),
+        ("request-sent", "Request sent"),
+        ("needs-follow-up", "Needs follow-up"),
+        ("confirmed", "Confirmed deleted")
+    ];
+
+    private List<BrokerRecord> brokers = [];
+    private ProfileData profile = new();
+    private BrokerRecord? selected;
+    private string filter = "all";
+    private bool showAdd;
+    private string newName = "";
+    private string newUrl = "";
+    private string addError = "";
+    private bool appliedOpen;
+
+    [SupplyParameterFromQuery(Name = "open")]
+    public string? OpenKey { get; set; }
+
+    [SupplyParameterFromQuery(Name = "status")]
+    public string? StatusFilter { get; set; }
+
+    private IReadOnlyList<BrokerRecord> visible => filter switch
+    {
+        "not-started" => brokers.Where(broker => broker.Status == BrokerStatus.NotStarted).ToList(),
+        "request-sent" => brokers.Where(broker => broker.Status == BrokerStatus.RequestSent).ToList(),
+        "needs-follow-up" => brokers.Where(broker => broker.Status == BrokerStatus.NeedsFollowUp).ToList(),
+        "confirmed" => brokers.Where(broker => broker.Status == BrokerStatus.ConfirmedDeleted).ToList(),
+        _ => brokers
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(StatusFilter) && chips.Any(chip => chip.Key == StatusFilter))
+        {
+            filter = StatusFilter;
+        }
+
+        await ReloadAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (appliedOpen || string.IsNullOrWhiteSpace(OpenKey) || brokers.Count == 0)
+        {
+            return;
+        }
+
+        selected = brokers.FirstOrDefault(broker => broker.BrokerKey == OpenKey);
+        appliedOpen = true;
+    }
+
+    private async Task ReloadAsync()
+    {
+        var openKey = selected?.BrokerKey;
+        brokers = await Catalog.ListAsync();
+        profile = await Profiles.GetAsync();
+        if (openKey is not null)
+        {
+            selected = brokers.FirstOrDefault(broker => broker.BrokerKey == openKey);
+        }
+    }
+
+    private void Open(BrokerRecord broker) => selected = broker;
+
+    private void ClosePanel() => selected = null;
+
+    private async Task AddAsync()
+    {
+        addError = await Catalog.AddCustomAsync(newName, newUrl) ?? "";
+        if (addError.Length > 0)
+        {
+            return;
+        }
+
+        newName = "";
+        newUrl = "";
+        showAdd = false;
+        filter = "all";
+        await ReloadAsync();
+    }
+
+    private void CancelAdd()
+    {
+        showAdd = false;
+        addError = "";
+        newName = "";
+        newUrl = "";
+    }
+}

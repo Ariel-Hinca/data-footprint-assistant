@@ -1,0 +1,168 @@
+@page "/request"
+@inject BrokerService Brokers
+@inject ProfileService Profiles
+@inject ActivityService Activities
+@inject IJSRuntime Js
+
+<PageTitle>Write a request — Data Footprint</PageTitle>
+
+<section class="sheet">
+    <header class="page-head">
+        <h1>Write a request</h1>
+        <p class="lede">Step @step of 3</p>
+    </header>
+
+    @if (step == 1)
+    {
+        <h2>Choose a broker</h2>
+        @if (brokers.Count == 0)
+        {
+            <EmptyState Message="Add a broker before you write a request." Href="brokers" Action="Go to brokers" />
+        }
+        else
+        {
+            <label class="field">
+                <span>Broker</span>
+                <select @bind="chosenKey">
+                    <option value="">Choose one</option>
+                    @foreach (var broker in brokers)
+                    {
+                        <option value="@broker.BrokerKey">@broker.Name</option>
+                    }
+                </select>
+            </label>
+            <button type="button" class="button" disabled="@string.IsNullOrWhiteSpace(chosenKey)" @onclick="GoToKind">Continue</button>
+        }
+    }
+    else if (step == 2)
+    {
+        <h2>What do you want to ask?</h2>
+        <p class="quiet">@chosen?.Name</p>
+        <div class="choices">
+            @foreach (var kindOption in Enum.GetValues<RequestKind>())
+            {
+                <button type="button" class="choice" @onclick="() => ChooseKind(kindOption)">
+                    <strong>@RequestKindText.Label(kindOption)</strong>
+                    <span>@RequestKindText.Summary(kindOption)</span>
+                </button>
+            }
+        </div>
+        <button type="button" class="text-button" @onclick="() => step = 1">Back</button>
+    }
+    else if (chosen is not null)
+    {
+        <h2>@RequestKindText.Label(kind)</h2>
+        <p class="quiet">@chosen.Name</p>
+        <p class="note">This is a draft for you to read and edit. It is not legal advice. If the broker has its own form, use that form first. The letter is a checklist of what to include.</p>
+        @if (!profile.HasName)
+        {
+            <p class="note">Your name is still blank. <a href="profile">Add it in My details</a>, or fill it in after you copy.</p>
+        }
+        <p class="field-label">Subject and message</p>
+        <pre class="letter">@letter</pre>
+        <div class="button-row">
+            <button type="button" class="button" @onclick="CopyAsync">Copy</button>
+            <button type="button" class="button button-secondary" @onclick="MarkSentAsync">Mark as request sent</button>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(feedback))
+        {
+            <p class="saved" role="status">@feedback</p>
+        }
+        <button type="button" class="text-button" @onclick="() => step = 2">Back</button>
+    }
+</section>
+
+@code {
+    private List<BrokerRecord> brokers = [];
+    private ProfileData profile = new();
+    private string chosenKey = "";
+    private RequestKind kind = RequestKind.DeleteMyData;
+    private int step = 1;
+    private string letter = "";
+    private string feedback = "";
+    private bool appliedQuery;
+
+    [SupplyParameterFromQuery(Name = "broker")]
+    public string? BrokerKey { get; set; }
+
+    [SupplyParameterFromQuery(Name = "step")]
+    public int? StepQuery { get; set; }
+
+    private BrokerRecord? chosen => brokers.FirstOrDefault(broker => broker.BrokerKey == chosenKey);
+
+    protected override async Task OnInitializedAsync()
+    {
+        brokers = await Brokers.ListAsync();
+        profile = await Profiles.GetAsync();
+        ApplyQuery();
+    }
+
+    protected override void OnParametersSet() => ApplyQuery();
+
+    private void ApplyQuery()
+    {
+        if (appliedQuery || brokers.Count == 0 || string.IsNullOrWhiteSpace(BrokerKey))
+        {
+            return;
+        }
+
+        if (brokers.Any(broker => broker.BrokerKey == BrokerKey))
+        {
+            chosenKey = BrokerKey;
+            step = StepQuery == 2 ? 2 : 1;
+        }
+
+        appliedQuery = true;
+    }
+
+    private void GoToKind()
+    {
+        if (chosen is null)
+        {
+            return;
+        }
+
+        step = 2;
+    }
+
+    private void ChooseKind(RequestKind next)
+    {
+        kind = next;
+        letter = chosen is null ? "" : RequestComposer.Compose(kind, chosen.Name, profile);
+        feedback = "";
+        step = 3;
+    }
+
+    private async Task CopyAsync()
+    {
+        if (chosen is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await Js.InvokeVoidAsync("footprintCopy", letter);
+            feedback = "Copied.";
+            await Activities.AddAsync(
+                $"Request copied for {chosen.Name} — {RequestKindText.Label(kind)}",
+                chosen.BrokerKey);
+        }
+        catch (JSException)
+        {
+            feedback = "Could not copy. Select the letter and copy it yourself.";
+        }
+    }
+
+    private async Task MarkSentAsync()
+    {
+        if (chosen is null)
+        {
+            return;
+        }
+
+        await Brokers.MarkRequestSentAsync(chosen.BrokerKey);
+        brokers = await Brokers.ListAsync();
+        feedback = "Marked as request sent.";
+    }
+}

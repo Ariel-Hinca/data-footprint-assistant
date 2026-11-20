@@ -1,0 +1,46 @@
+<div class="lookup">
+    <h2>Look me up</h2>
+    <p class="quiet">These open a normal Google search in a new tab. This app does not read the results.</p>
+    <div class="lookup-row">
+        @if (Profile.HasEmail)
+        {
+            <a class="button button-quiet" href="@PublicSearch.Google(Profile.Emails)" target="_blank" rel="noopener noreferrer">Search my email</a>
+        }
+        else
+        {
+            <span class="lookup-disabled">
+                <button type="button" class="button button-quiet" disabled>Search my email</button>
+                <span class="hint">Add an email in My details first.</span>
+            </span>
+        }
+
+        @if (Profile.HasPhone)
+        {
+            <a class="button button-quiet" href="@PublicSearch.Google(Profile.Phones)" target="_blank" rel="noopener noreferrer">Search my phone</a>
+        }
+        else
+        {
+            <span class="lookup-disabled">
+                <button type="button" class="button button-quiet" disabled>Search my phone</button>
+                <span class="hint">Add a phone number in My details first.</span>
+            </span>
+        }
+
+        @if (Profile.HasName)
+        {
+            <a class="button button-quiet" href="@PublicSearch.Google([Profile.FullName])" target="_blank" rel="noopener noreferrer">Search my name</a>
+        }
+        else
+        {
+            <span class="lookup-disabled">
+                <button type="button" class="button button-quiet" disabled>Search my name</button>
+                <span class="hint">Add your name in My details first.</span>
+            </span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProfileData Profile { get; set; } = new();
+}
